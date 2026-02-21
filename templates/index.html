@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UQ/GU 商品查詢</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: #f5f0eb;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 20px;
+        }
+
+        /* 品牌切換 */
+        .brand-toggle {
+            display: flex;
+            margin-bottom: 20px;
+            border: 1px solid #c8b8a2;
+            overflow: hidden;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .brand-toggle input[type="radio"] { display: none; }
+
+        .brand-toggle label {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            font-family: 'Georgia', serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #888;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-right: 1px solid #c8b8a2;
+        }
+
+        .brand-toggle label:last-of-type { border-right: none; }
+
+        .brand-toggle input[type="radio"]:checked + label {
+            background: #2c2c2c;
+            color: #f5f0eb;
+        }
+
+        h1 {
+            font-size: 2rem;
+            letter-spacing: 0.15em;
+            color: #2c2c2c;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #888;
+            letter-spacing: 0.2em;
+            margin-bottom: 40px;
+            text-transform: uppercase;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 0;
+            margin-bottom: 50px;
+            border: 1px solid #c8b8a2;
+            overflow: hidden;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            outline: none;
+            font-family: 'Georgia', serif;
+            font-size: 0.95rem;
+            background: #fff;
+            color: #2c2c2c;
+            letter-spacing: 0.05em;
+        }
+
+        .search-box input::placeholder { color: #bbb; }
+
+        .search-box button {
+            padding: 14px 28px;
+            background: #2c2c2c;
+            color: #f5f0eb;
+            border: none;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            font-size: 0.85rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            transition: background 0.2s;
+        }
+
+        .search-box button:hover { background: #444; }
+
+        /* 結果卡片 */
+        .card {
+            background: #fff;
+            border: 1px solid #e0d6c8;
+            max-width: 700px;
+            width: 100%;
+            display: flex;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        .card-image {
+            width: 220px;
+            min-width: 220px;
+            object-fit: cover;
+            display: block;
+            border-right: 1px solid #e0d6c8;
+        }
+
+        .card-body {
+            padding: 32px 36px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .card-model {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        .card-name {
+            font-size: 1.25rem;
+            color: #2c2c2c;
+            line-height: 1.5;
+            font-weight: normal;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #e0d6c8;
+        }
+
+        .price-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .price-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .price-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        .price-value {
+            font-size: 1.3rem;
+            color: #2c2c2c;
+        }
+
+        .price-value.current { color: #c0392b; }
+        .price-value.high    { color: #888; }
+        .price-value.low     { color: #27ae60; }
+
+        .card-link {
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            color: #888;
+            text-decoration: none;
+            text-transform: uppercase;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 1px;
+            align-self: flex-start;
+            transition: color 0.2s;
+        }
+        .card-link:hover { color: #2c2c2c; }
+
+        .error-msg {
+            color: #c0392b;
+            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-subscribe, .btn-unsubscribe {
+            padding: 8px 20px;
+            font-family: 'Georgia', serif;
+            font-size: 0.8rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border: 1px solid #c8b8a2;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-subscribe {
+            background: #2c2c2c;
+            color: #f5f0eb;
+        }
+        .btn-subscribe:hover { background: #444; }
+
+        .btn-unsubscribe {
+            background: #fff;
+            color: #888;
+        }
+        .btn-unsubscribe:hover { background: #f5f0eb; }
+
+        .success-msg {
+            color: #27ae60;
+            font-size: 0.9rem;
+            letter-spacing: 0.05em;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>UQ/GU 商品查詢</h1>
+    <p class="subtitle">UNIQLO 商品比價查詢</p>
+
+    <form method="POST">
+        <!-- 品牌切換 -->
+        <div class="brand-toggle">
+            <input type="radio" id="uniqlo" name="brand" value="uniqlo"
+                {{ 'checked' if not result or brand  == 'uniqlo' else '' }}>
+            <label for="uniqlo">UNIQLO</label>
+    
+            <input type="radio" id="gu" name="brand" value="gu"
+                {{ 'checked' if result and brand  == 'gu' else '' }}>
+            <label for="gu">GU</label>
+        </div>
+    
+        <!-- 搜尋框 -->
+        <div class="search-box">
+            <input
+                type="text"
+                name="model"
+                placeholder="輸入型號，例如 u0000000052200"
+                value="{{ model }}"
+                autocomplete="off"
+            >
+            <button type="submit">Search</button>
+        </div>
+    </form>
+    
+
+    {% if error %}
+        <p class="error-msg">⚠ 查詢失敗：{{ error }}</p>
+    {% endif %}
+
+    {% if result %}
+    <div class="card">
+        <img class="card-image" src="{{ result.image }}" alt="{{ result.name }}">
+        <div class="card-body">
+            <span class="card-model">{{ result.model }}</span>
+            <h2 class="card-name">{{ result.name }}</h2>
+            <hr class="divider">
+            <div class="price-grid">
+                <div class="price-item">
+                    <span class="price-label">目前價格</span>
+                    <span class="price-value current">NT${{ result.current_price }}</span>
+                </div>
+                <div class="price-item">
+                    <span class="price-label">歷史高價</span>
+                    <span class="price-value high">NT${{ result.high_price }}</span>
+                </div>
+                <div class="price-item">
+                    <span class="price-label">歷史低價</span>
+                    <span class="price-value low">NT${{ result.low_price }}</span>
+                </div>
+            </div>
+            <hr class="divider">
+            <a class="card-link" href="{{ result.url }}" target="_blank">前往 UQ 頁面 →</a>
+            <!-- 訂閱按鈕 -->
+            {% if already_subscribed %}
+            <form method="POST" action="/unsubscribe">
+                <input type="hidden" name="model" value="{{ result.model }}">
+                <input type="hidden" name="brand" value="{{ brand  }}"> 
+                <button class="btn-unsubscribe" type="submit">✓ 已訂閱，點此取消</button>
+            </form>
+            {% else %}
+            <form method="POST" action="/subscribe">
+                <input type="hidden" name="model" value="{{ result.model }}">
+                <input type="hidden" name="name"  value="{{ result.name }}">
+                <input type="hidden" name="brand"  value="{{ brand  }}">
+                <input type="hidden" name="url"   value="{{ result.url }}">
+                <button class="btn-subscribe" type="submit">＋ 訂閱價格通知</button>
+            </form>
+            {% endif %}
+
+            {% if subscribed_status == 'ok' %}
+                <p class="success-msg">✅ 已加入訂閱清單！</p>
+            {% elif subscribed_status == 'already' %}
+                <p class="error-msg">⚠ 此商品已在訂閱清單中</p>
+            {% endif %}
+                    
+        
+        </div>
+    </div>
+    {% endif %}
+
+</body>
+</html>
