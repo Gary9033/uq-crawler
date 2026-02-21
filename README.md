@@ -20,8 +20,7 @@ UNIQLO / GU 商品價格查詢與監控工具，支援歷史高低價查詢、�
 uq-crawler/
 ├── app.py              # Flask 伺服器 + 路由
 ├── main.py             # 爬蟲核心邏輯 (uq_crawl)
-├── notify.py           # 每日 Email 通知
-├── watchlist.py        # 訂閱清單管理
+├── watchlist.py        # 訂閱清單管理、每日 Email 通知
 ├── watchlist.json      # 訂閱資料（自動產生）
 └── templates/
     └── index.html      # 網頁前端
@@ -60,14 +59,14 @@ python app.py
 ### 手動執行 Email 通知
 
 ```bash
-python notify.py
+python watchlist.py
 ```
 
 ---
 
 ## Email 通知設定
 
-在 `notify.py` 填入：
+在 `watchlist.py` 填入：
 
 ```python
 GMAIL_USER     = "你的Gmail@gmail.com"
@@ -86,7 +85,7 @@ NOTIFY_TO      = "收件人@gmail.com"
 ```powershell
 $action = New-ScheduledTaskAction `
     -Execute "D:\otherthing\anaconda3\python.exe" `
-    -Argument "D:\otherthing\school\雜物\other\uq-crawler\notify.py"
+    -Argument "D:\otherthing\school\雜物\other\uq-crawler\watchlist.py"
 
 $trigger = New-ScheduledTaskTrigger -Daily -At "09:00"
 
@@ -99,9 +98,9 @@ Register-ScheduledTask `
 
 ---
 
-## GU 商品查詢說明
+## 實體商品編號查詢說明(目前不支援)
 
-GU 商品型號格式與 UNIQLO 不同（例如 `358337`），系統會自動使用 Selenium 搜尋對應的完整型號，需要安裝 ChromeDriver：
+GU、Uniqlo 商品型號格式（例如 `358337`）和網路編號不同，系統會自動使用 Selenium 搜尋對應的完整型號，需要安裝 ChromeDriver：
 
 ```bash
 pip install selenium
