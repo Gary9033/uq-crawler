@@ -61,7 +61,6 @@ def remove_from_watchlist(model, brand):
 def is_subscribed(model, brand):
     watchlist = load_watchlist()
     return any(item["model"] == model and item["brand"] == brand for item in watchlist)
-
 def main():
     watchlist = load_watchlist()
     if not watchlist:
@@ -69,54 +68,72 @@ def main():
         return
 
     now = datetime.datetime.now().strftime("%Y/%m/%d %H:%M")
-    rows = ""
     updated = False
+
     for item in watchlist:
         result = uq_crawl(item["model"], item["brand"])
         if "error" in result:
             continue
+
         new_price = int(result['current_price'])
-        saved_price = int(item.get("current_price", new_price))  # 讀取 JSON 記錄的價
-        is_low = new_price  == int(result['low_price'])
+        saved_price = int(item.get("current_price", new_price))
+        is_low = new_price == int(result['low_price'])
         tag = "🔥 歷史低價！" if is_low else ""
         badge_color = "#27ae60" if is_low else "#888"
 
-        price_drop = new_price < saved_price
-        drop_tag = f"📉 降價！（{saved_price} → {new_price}）" if price_drop else ""
-        rows += f"""
-        <tr>
-            <td><img src="{result['image']}" width="60"><br>{item['name']}</td>
-            <td style="color:{badge_color}"><b>NT${new_price}</b><br>{tag}{drop_tag}</td>
-            <td>NT${result['high_price']}</td>
-            <td>NT${result['low_price']}</td>
-            <td><a href="{item['url']}">前往</a></td>
-        </tr>
-        """
-
-        # ── 若有降價，更新 JSON 並準備寄信 ───────────────
-        if price_drop:
-            item["current_price"] = new_price  # 更新 JSON 紀錄
+        # ── 有降價才寄信 ──────────────────────────────────────
+        if new_price < saved_price:
+            item["current_price"] = new_price
             updated = True
-            drop_html = f"""
-            <h2>📉 {item['name']} 降價通知</h2>
-            <p>型號：{item['model']} ({item['brand'].upper()})</p>
-            <p>原紀錄價格：<b>NT${saved_price}</b></p>
-            <p>目前價格：<b style="color:red">NT${new_price}</b></p>
-            <p><a href="{item['url']}">立即前往商品頁</a></p>
+
+            html = f"""
+            <div style="font-family:sans-serif;max-width:600px;margin:auto">
+              <h2 style="color:#2c3e50">🛍 UQ Watch 每日價格報告</h2>
+              <p style="color:#888">{now}</p>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0"
+                     style="border-collapse:collapse;font-size:14px">
+                <thead>
+                  <tr style="background:#f5f5f5">
+                    <th style="padding:8px">商品</th>
+                    <th style="padding:8px">目前價格</th>
+                    <th style="padding:8px">歷史高價</th>
+                    <th style="padding:8px">歷史低價</th>
+                    <th style="padding:8px">連結</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding:8px;text-align:center">
+                      <img src="{result['image']}" width="72" style="border-radius:6px"><br>
+                      <span style="font-size:13px">{item['name']}</span>
+                    </td>
+                    <td style="padding:8px;text-align:center;color:{badge_color}">
+                      <b>NT${new_price}</b><br>
+                      <span style="font-size:12px">{tag}</span>
+                    </td>
+                    <td style="padding:8px;text-align:center">NT${result['high_price']}</td>
+                    <td style="padding:8px;text-align:center">NT${result['low_price']}</td>
+                    <td style="padding:8px;text-align:center">
+                      <a href="{item['url']}">前往</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p style="color:#aaa;font-size:12px;margin-top:20px">
+                UQ Search · 自動每日通知
+              </p>
+            </div>
             """
             send_email(
-                subject=f"【降價通知】{item['name']} 現在 NT${new_price}",
-                body_html=drop_html
+                subject=f"【UQ Watch 降價通知】{item['name']} 現在 NT${new_price}",
+                body_html=html
             )
-            print(f"✅ 寄出降價通知：{item['name']} {saved_price} → {new_price}")
+            print(f"✅ 寄出降價通知：{item['name']} NT${saved_price} → NT${new_price}")
+        else:
+            print(f"⏭ 無降價，略過：{item['name']} NT${new_price}")
 
-    # ── 若有任何降價，更新 watchlist.json ─────────────
     if updated:
         save_watchlist(watchlist)
-
-    # ── 每日總覽信件（原有邏輯）───────────────────────
-    html = f"""..."""  # 你原有的 HTML 模板
-    send_email(subject=f"【UQ Watch】每日價格報告 {now}", body_html=html)
 
 
 if __name__ == "__main__":
