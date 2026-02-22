@@ -10,7 +10,8 @@ def subscribe():
     brand = request.form.get("brand")
     name  = request.form.get("name")
     url   = request.form.get("url")
-    success = add_to_watchlist(model, brand, name, url)
+    current_price = request.form.get("current_price", "0")  # ← 從表單接收價格
+    success = add_to_watchlist(model, brand, name, url, current_price)
     status = "already" if not success else "ok"
     return redirect(f"/?subscribed={status}&model={model}&brand={brand}")
 

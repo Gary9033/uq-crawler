@@ -34,7 +34,7 @@ def save_watchlist(data):
     with open(WATCHLIST_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def add_to_watchlist(model, brand, name, url):
+def add_to_watchlist(model, brand, name, url, current_price):
     watchlist = load_watchlist()
     # 同時比對 model + brand
     if any(item["model"] == model and item["brand"] == brand for item in watchlist):
@@ -43,7 +43,8 @@ def add_to_watchlist(model, brand, name, url):
         "model": model,
         "brand": brand,
         "name": name,
-        "url": url
+        "url": url,
+        "current_price": int(current_price)  # ← 新增，訂閱當下的價格
     })
     save_watchlist(watchlist)
     return True
@@ -71,74 +72,52 @@ def main():
     rows = ""
 
     for item in watchlist:
-        result = uq_crawl(item["model"])
-        is_low = int(result['current_price']) == int(result['low_price'])
+        result = uq_crawl(item["model"], item["brand"])
+        if "error" in result:
+            continue
+        new_price = int(result['current_price'])
+        saved_price = int(item.get("current_price", new_price))  # 讀取 JSON 記錄的價
+        is_low = new_price  == int(result['low_price'])
         tag = "🔥 歷史低價！" if is_low else ""
         badge_color = "#27ae60" if is_low else "#888"
 
+        price_drop = new_price < saved_price
+        drop_tag = f"📉 降價！（{saved_price} → {new_price}）" if price_drop else ""
         rows += f"""
         <tr>
-            <td style="padding:16px; border-bottom:1px solid #f0ebe3;">
-                <strong>{result['name']}</strong><br>
-                <span style="color:#aaa; font-size:0.85rem;">{result['model']}</span>
-            </td>
-            <td style="padding:16px; border-bottom:1px solid #f0ebe3; color:#c0392b; font-size:1.2rem;">
-                NT${result['current_price']}
-            </td>
-            <td style="padding:16px; border-bottom:1px solid #f0ebe3; color:#888;">
-                NT${result['high_price']}
-            </td>
-            <td style="padding:16px; border-bottom:1px solid #f0ebe3; color:{badge_color};">
-                NT${result['low_price']} {tag}
-            </td>
-            <td style="padding:16px; border-bottom:1px solid #f0ebe3;">
-                <a href="{result['url']}" style="color:#2c2c2c; font-size:0.8rem;">前往頁面 →</a>
-            </td>
+            <td><img src="{result['image']}" width="60"><br>{item['name']}</td>
+            <td style="color:{badge_color}"><b>NT${new_price}</b><br>{tag}{drop_tag}</td>
+            <td>NT${result['high_price']}</td>
+            <td>NT${result['low_price']}</td>
+            <td><a href="{item['url']}">前往</a></td>
         </tr>
         """
 
-    body_html = f"""
-    <div style="font-family:Georgia,serif; background:#f5f0eb; padding:40px 20px;">
-        <div style="max-width:700px; margin:0 auto; background:#fff; border:1px solid #e0d6c8;">
+        # ── 若有降價，更新 JSON 並準備寄信 ───────────────
+        if price_drop:
+            item["current_price"] = new_price  # 更新 JSON 紀錄
+            updated = True
+            drop_html = f"""
+            <h2>📉 {item['name']} 降價通知</h2>
+            <p>型號：{item['model']} ({item['brand'].upper()})</p>
+            <p>原紀錄價格：<b>NT${saved_price}</b></p>
+            <p>目前價格：<b style="color:red">NT${new_price}</b></p>
+            <p><a href="{item['url']}">立即前往商品頁</a></p>
+            """
+            send_email(
+                subject=f"【降價通知】{item['name']} 現在 NT${new_price}",
+                body_html=drop_html
+            )
+            print(f"✅ 寄出降價通知：{item['name']} {saved_price} → {new_price}")
 
-            <!-- Header -->
-            <div style="background:#2c2c2c; padding:28px 36px;">
-                <h1 style="color:#f5f0eb; margin:0; font-size:1.5rem; letter-spacing:0.15em;">
-                    UQ PRICE REPORT
-                </h1>
-                <p style="color:#888; margin:6px 0 0; font-size:0.8rem; letter-spacing:0.2em;">
-                    {now}
-                </p>
-            </div>
+    # ── 若有任何降價，更新 watchlist.json ─────────────
+    if updated:
+        save_watchlist(watchlist)
 
-            <!-- Table -->
-            <table style="width:100%; border-collapse:collapse;">
-                <thead>
-                    <tr style="background:#f5f0eb;">
-                        <th style="padding:12px 16px; text-align:left; font-size:0.7rem; letter-spacing:0.15em; color:#aaa; font-weight:normal;">商品</th>
-                        <th style="padding:12px 16px; text-align:left; font-size:0.7rem; letter-spacing:0.15em; color:#aaa; font-weight:normal;">目前價格</th>
-                        <th style="padding:12px 16px; text-align:left; font-size:0.7rem; letter-spacing:0.15em; color:#aaa; font-weight:normal;">歷史高價</th>
-                        <th style="padding:12px 16px; text-align:left; font-size:0.7rem; letter-spacing:0.15em; color:#aaa; font-weight:normal;">歷史低價</th>
-                        <th style="padding:12px 16px; text-align:left; font-size:0.7rem; letter-spacing:0.15em; color:#aaa; font-weight:normal;">連結</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {rows}
-                </tbody>
-            </table>
+    # ── 每日總覽信件（原有邏輯）───────────────────────
+    html = f"""..."""  # 你原有的 HTML 模板
+    send_email(subject=f"【UQ Watch】每日價格報告 {now}", body_html=html)
 
-            <!-- Footer -->
-            <div style="padding:20px 36px; border-top:1px solid #e0d6c8;">
-                <p style="color:#aaa; font-size:0.75rem; letter-spacing:0.1em;">
-                    UQ Search · 自動每日通知
-                </p>
-            </div>
-        </div>
-    </div>
-    """
-
-    send_email(f"🛍 UQ 每日價格更新 {now}", body_html)
-    print(f"Email 已寄出：{now}")
 
 if __name__ == "__main__":
     main()
