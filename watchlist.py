@@ -70,7 +70,7 @@ def main():
 
     now = datetime.datetime.now().strftime("%Y/%m/%d %H:%M")
     rows = ""
-
+    updated = False
     for item in watchlist:
         result = uq_crawl(item["model"], item["brand"])
         if "error" in result:
